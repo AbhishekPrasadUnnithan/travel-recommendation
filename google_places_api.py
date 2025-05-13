@@ -2,35 +2,36 @@ import requests
 import pandas as pd
 from sqlalchemy import create_engine
 import time
+import os
+from dotenv import load_dotenv
 
-# Replace this with your actual Google Places API key
-API_KEY = "AIzaSyDAc6pSHWoyjIGL_3yM9FPh1ia3rM7EdQM"
+# Load environment variables from .env file
+load_dotenv()
+
+# Get API Key from environment variable
+API_KEY = os.getenv("GOOGLE_API_KEY")
 
 # Assign price level based on rating if missing
 def map_rating_to_price_level(rating):
     if rating >= 4.5:
-        return 4  # Very Expensive
+        return 4
     elif rating >= 4.0:
-        return 3  # Expensive
+        return 3
     elif rating >= 3.5:
-        return 2  # Moderate
+        return 2
     else:
-        return 1  # Inexpensive
+        return 1
 
 # Map price level to estimated price
 def map_price_level_to_price(price_level):
-    if price_level == 1:
-        return 1500
-    elif price_level == 2:
-        return 2500
-    elif price_level == 3:
-        return 3500
-    elif price_level == 4:
-        return 4500
-    else:
-        return 3000  # Default fallback
+    return {
+        1: 1500,
+        2: 2500,
+        3: 3500,
+        4: 4500
+    }.get(price_level, 3000)
 
-# Fetch hotels from Google API using next_page_token for full results
+# Fetch hotels from Google API
 def fetch_all_hotels(city, radius=5000):
     base_url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
     params = {
@@ -45,21 +46,14 @@ def fetch_all_hotels(city, radius=5000):
     while True:
         response = requests.get(base_url, params=params)
         data = response.json()
-
         results = data.get("results", [])
 
         for hotel in results:
             name = hotel.get("name")
             rating = hotel.get("rating", 0.0)
-            if rating is None:
-                rating = 0.0
             address = hotel.get("formatted_address")
-            price_level = hotel.get("price_level")
-            if price_level is None:
-                price_level = map_rating_to_price_level(rating)
+            price_level = hotel.get("price_level") or map_rating_to_price_level(rating)
             price = map_price_level_to_price(price_level)
-
-            # Add Google Maps link
             place_id = hotel.get("place_id")
             google_maps_link = f"https://www.google.com/maps/place/?q=place_id:{place_id}"
 
@@ -76,17 +70,16 @@ def fetch_all_hotels(city, radius=5000):
         next_token = data.get("next_page_token")
         if not next_token or page >= 3:
             break
-
         params = {
             "pagetoken": next_token,
             "key": API_KEY
         }
-        time.sleep(2)  # Wait for token to activate
+        time.sleep(2)
         page += 1
 
     return hotel_list
 
-# Save results to SQLite database
+# Save to database
 def save_to_db(all_hotels):
     df = pd.DataFrame(all_hotels)
     print("Saving to hotels.db...")
@@ -94,7 +87,7 @@ def save_to_db(all_hotels):
     df.to_sql("hotels", engine, if_exists="replace", index=False)
     print("Saved successfully!")
 
-# Main logic
+# Main
 if __name__ == "__main__":
     cities = ["Kochi", "Delhi", "Mumbai", "Bangalore", "Chennai", "Hyderabad"]
     all_hotels = []

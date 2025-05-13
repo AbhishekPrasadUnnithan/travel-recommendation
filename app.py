@@ -40,7 +40,7 @@ city = st.sidebar.selectbox("Choose a City", city_list)
 rating_range = st.sidebar.slider("Rating Range", 0.0, 5.0, (3.0, 5.0), step=0.1)
 
 price_level_map = {
-    "Inexpensive (₹1000–2000)": 1,
+    "Inexpensive (₹500–2000)": 1,
     "Moderate (₹2000–3000)": 2,
     "Expensive (₹3000–4000)": 3,
     "Very Expensive (₹4000+)": 4
