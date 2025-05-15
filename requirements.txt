@@ -3,3 +3,4 @@ pandas
 SQLAlchemy
 requests
 python-dotenv
+pytest
